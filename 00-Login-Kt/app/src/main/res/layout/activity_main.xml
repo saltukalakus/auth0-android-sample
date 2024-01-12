@@ -98,6 +98,26 @@
                 android:text="Patch"
                 android:layout_marginLeft="8dp"/>
         </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+            <Button
+                android:id="@+id/button_credentials_api"
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="Get Token with Credentials API"
+                android:layout_marginRight="8dp"/>
+
+            <Button
+                android:id="@+id/button_authentication_api"
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="Get Token with Authentication API"
+                android:layout_marginLeft="8dp"/>
+        </LinearLayout>
     </LinearLayout>
 
 

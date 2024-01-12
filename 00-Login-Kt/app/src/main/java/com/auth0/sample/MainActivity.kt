@@ -6,6 +6,9 @@ import androidx.core.view.isVisible
 import com.auth0.android.Auth0
 import com.auth0.android.authentication.AuthenticationAPIClient
 import com.auth0.android.authentication.AuthenticationException
+import com.auth0.android.authentication.storage.CredentialsManager
+import com.auth0.android.authentication.storage.CredentialsManagerException
+import com.auth0.android.authentication.storage.SharedPreferencesStorage
 import com.auth0.android.callback.Callback
 import com.auth0.android.management.ManagementException
 import com.auth0.android.management.UsersAPIClient
@@ -38,6 +41,8 @@ class MainActivity : AppCompatActivity() {
         binding.buttonLogout.setOnClickListener { logout() }
         binding.buttonGetMetadata.setOnClickListener { getUserMetadata() }
         binding.buttonPatchMetadata.setOnClickListener { patchUserMetadata() }
+        binding.buttonCredentialsApi.setOnClickListener { callCredentialsAPI() }
+        binding.buttonAuthenticationApi.setOnClickListener { callAuthenticationAPI() }
     }
 
     private fun updateUI() {
@@ -56,10 +61,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loginWithBrowser() {
+        val client = AuthenticationAPIClient(account)
+        val manager = CredentialsManager(client, SharedPreferencesStorage(this))
         // Setup the WebAuthProvider, using the custom scheme and scope.
         WebAuthProvider.login(account)
             .withScheme(getString(R.string.com_auth0_scheme))
-            .withScope("openid profile email read:current_user update:current_user_metadata")
+            .withScope("openid profile email offline_access read:current_user update:current_user_metadata")
             .withAudience("https://${getString(R.string.com_auth0_domain)}/api/v2/")
 
             // Launch the authentication passing the callback where the results will be received
@@ -71,6 +78,8 @@ class MainActivity : AppCompatActivity() {
                 override fun onSuccess(credentials: Credentials) {
                     cachedCredentials = credentials
                     showSnackBar("Success: ${credentials.accessToken}")
+                    println("Debug: ${credentials.refreshToken}")
+                    manager.saveCredentials(credentials)
                     updateUI()
                     showUserProfile()
                 }
@@ -151,6 +160,29 @@ class MainActivity : AppCompatActivity() {
                     showSnackBar("Successful")
                 }
             })
+    }
+
+    private fun callCredentialsAPI() {
+        val client = AuthenticationAPIClient(account)
+        val manager = CredentialsManager(client, SharedPreferencesStorage(this))
+        manager.getCredentials(object: Callback<Credentials, CredentialsManagerException> {
+           override fun onSuccess(credentials: Credentials) {
+             // Use credentials
+             showSnackBar("Success: ${credentials.accessToken}")
+             cachedCredentials = credentials
+             println("Debug: ${credentials.refreshToken}")
+           }
+
+           override fun onFailure(error: CredentialsManagerException) {
+              // No credentials were previously saved or they couldn't be refreshed
+              showSnackBar("No credentials were previously saved or they couldn't be refreshed")
+              println("Debug: $error")
+           }
+        })
+    }
+
+    private fun callAuthenticationAPI() {
+
     }
 
     private fun showSnackBar(text: String) {
