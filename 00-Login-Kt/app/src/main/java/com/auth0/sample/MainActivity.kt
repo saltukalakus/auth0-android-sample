@@ -18,10 +18,13 @@ import com.auth0.android.result.UserProfile
 import com.auth0.sample.databinding.ActivityMainBinding
 import com.google.android.material.snackbar.Snackbar
 
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var account: Auth0
     private lateinit var binding: ActivityMainBinding
+    private lateinit var client: AuthenticationAPIClient
+    private lateinit var manager: CredentialsManager
     private var cachedCredentials: Credentials? = null
     private var cachedUserProfile: UserProfile? = null
 
@@ -33,9 +36,10 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.com_auth0_client_id),
             getString(R.string.com_auth0_domain)
         )
-        // val client = AuthenticationAPIClient(account)
-        // val manager = CredentialsManager(client, SharedPreferencesStorage(this))
-        
+        client = AuthenticationAPIClient(account)
+        manager = CredentialsManager(client, SharedPreferencesStorage(this))
+        manager.clearCredentials()
+
         // Bind the button click with the login action
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -63,12 +67,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loginWithBrowser() {
-        val client = AuthenticationAPIClient(account)
-        val manager = CredentialsManager(client, SharedPreferencesStorage(this))
         // Setup the WebAuthProvider, using the custom scheme and scope.
         WebAuthProvider.login(account)
             .withScheme(getString(R.string.com_auth0_scheme))
-            .withScope("openid profile email offline_access")
+            .withScope("openid profile email offline_access read:current_user update:current_user_metadata")
             .withAudience("https://${getString(R.string.com_auth0_domain)}/api/v2/")
 
             // Launch the authentication passing the callback where the results will be received
@@ -89,8 +91,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun logout() {
-        val client = AuthenticationAPIClient(account)
-        val manager = CredentialsManager(client, SharedPreferencesStorage(this))
         WebAuthProvider.logout(account)
             .withScheme(getString(R.string.com_auth0_scheme))
             .start(this, object : Callback<Void?, AuthenticationException> {
@@ -168,8 +168,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun callCredentialsAPI() {
-        val client = AuthenticationAPIClient(account)
-        val manager = CredentialsManager(client, SharedPreferencesStorage(this))
         manager.getCredentials(object: Callback<Credentials, CredentialsManagerException> {
            override fun onSuccess(credentials: Credentials) {
              // Use credentials
@@ -186,13 +184,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun callAuthenticationAPI() {
-         val client = AuthenticationAPIClient(account)
-         val manager = CredentialsManager(client, SharedPreferencesStorage(this))
          val refreshToken = cachedCredentials?.refreshToken
 
         if (refreshToken != null) {
             client.renewAuth(refreshToken)
-            .addParameter("scope", "openid profile email offline_access read:current_user update:current_user_metadata")
+            .addParameter("custom_param", "custom_value")
             .start(object : Callback<Credentials, AuthenticationException> {
 
                 override fun onSuccess(credentials: Credentials) {
