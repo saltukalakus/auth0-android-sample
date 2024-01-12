@@ -33,7 +33,9 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.com_auth0_client_id),
             getString(R.string.com_auth0_domain)
         )
-
+        // val client = AuthenticationAPIClient(account)
+        // val manager = CredentialsManager(client, SharedPreferencesStorage(this))
+        
         // Bind the button click with the login action
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -66,7 +68,7 @@ class MainActivity : AppCompatActivity() {
         // Setup the WebAuthProvider, using the custom scheme and scope.
         WebAuthProvider.login(account)
             .withScheme(getString(R.string.com_auth0_scheme))
-            .withScope("openid profile email offline_access read:current_user update:current_user_metadata")
+            .withScope("openid profile email offline_access")
             .withAudience("https://${getString(R.string.com_auth0_domain)}/api/v2/")
 
             // Launch the authentication passing the callback where the results will be received
@@ -87,6 +89,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun logout() {
+        val client = AuthenticationAPIClient(account)
+        val manager = CredentialsManager(client, SharedPreferencesStorage(this))
         WebAuthProvider.logout(account)
             .withScheme(getString(R.string.com_auth0_scheme))
             .start(this, object : Callback<Void?, AuthenticationException> {
@@ -94,6 +98,7 @@ class MainActivity : AppCompatActivity() {
                     // The user has been logged out!
                     cachedCredentials = null
                     cachedUserProfile = null
+                    manager.clearCredentials()
                     updateUI()
                 }
 
@@ -174,7 +179,6 @@ class MainActivity : AppCompatActivity() {
            }
 
            override fun onFailure(error: CredentialsManagerException) {
-              // No credentials were previously saved or they couldn't be refreshed
               showSnackBar("No credentials were previously saved or they couldn't be refreshed")
               println("Debug: $error")
            }
@@ -182,8 +186,33 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun callAuthenticationAPI() {
+         val client = AuthenticationAPIClient(account)
+         val manager = CredentialsManager(client, SharedPreferencesStorage(this))
+         val refreshToken = cachedCredentials?.refreshToken
 
+        if (refreshToken != null) {
+            client.renewAuth(refreshToken)
+            .addParameter("scope", "openid profile email offline_access read:current_user update:current_user_metadata")
+            .start(object : Callback<Credentials, AuthenticationException> {
+
+                override fun onSuccess(credentials: Credentials) {
+                    showSnackBar("Success: ${credentials.accessToken}")
+                    manager.saveCredentials(credentials)
+                    cachedCredentials = credentials
+                    println("Debug: ${credentials.refreshToken}")
+                }
+
+                override fun onFailure(error: AuthenticationException) {
+                    showSnackBar("No credentials were previously saved or they couldn't be refreshed")
+                    println("Debug: $error")
+                }
+            })
+        } else {
+            // Handle the case when refreshToken is null
+            showSnackBar("Cached refresh token is null")
+        }
     }
+
 
     private fun showSnackBar(text: String) {
         Snackbar.make(
