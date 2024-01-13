@@ -193,9 +193,22 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onSuccess(credentials: Credentials) {
                     showSnackBar("Success: ${credentials.accessToken}")
-                    manager.saveCredentials(credentials)
-                    cachedCredentials = credentials
+
                     println("Debug: ${credentials.refreshToken}")
+
+                    if (credentials.refreshToken == null) {
+                        val tmpObject = Credentials(refreshToken = cachedCredentials?.refreshToken,
+                            accessToken = credentials.accessToken,
+                            idToken = credentials.idToken,
+                            type = credentials.type,
+                            scope = credentials.scope,
+                            expiresAt = credentials.expiresAt)
+                        manager.saveCredentials(tmpObject)
+                        cachedCredentials = tmpObject
+                    } else {
+                        manager.saveCredentials(credentials)
+                        cachedCredentials = credentials
+                    }
                 }
 
                 override fun onFailure(error: AuthenticationException) {
